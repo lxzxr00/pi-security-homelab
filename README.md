@@ -75,6 +75,42 @@ Test: a login attempt with a key authentication disabled is now refused
 
 ![Password refused](screenshots/05-password-refused.png)
 
+## 5. fail2ban
+
+Installed fail2ban and enabled the 'sshd' jail in '/etc/fail2ban/jail.local' (5 failed attempts within 10 minutes bans the source for 1 hour. My admin PC is whitelisted)
+
+This is the configuration file created for fail2ban,
+backend = systemd is needed beacuse current Raspberry Pi OS logs SSH to the systemd journal instead of to /var/log/auth.log
+
+'''
+sudo nano /etc/fail2ban/jail.local
+'''
+
+![fail2ban jail.local](screenshots/06-fail2ban-jail-local.png)
+
+Ecpected output from the service status.
+
+'''
+sudo systemctl status fail2ban
+'''
+
+![fail2ban status](screenshots/06-fail2ban-status.png)
+
+Expected output from the fail2ban-client status sshd
+
+'''
+sudo fail2ban-client status sshd
+'''
+
+![fail2ban-client status](screenshots/06-fail2ban-client-status-sshd.png)
+
+## 6. Docker
+
+Installed Docker with the official script and verified it with 'hello-world'. Displayed version.
+
+![Docker hello-world](screenshots/07-docker-hello-world.png)
+
+
 ## Troubleshooting log
 
 -** 100% packet loss between the PC and the Pi.** The Pi's unplugged 'eth0' still had a lower-metric route for the local network, so traffic went out the dead interface instead of Wi-Fi. Bringing the wired connection down fixed it.
