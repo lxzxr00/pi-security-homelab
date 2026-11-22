@@ -29,7 +29,7 @@ Installed Raspberry Pi OS Lite and updated it with 'sudo apt update && sudo apt 
 Scanned all ports from my PC after enabling SSH:
 
 '''
-nmap -sV -p- -T4 <pi-ip> -oN baseline-nmap.txt
+nmap -sV -p- -T4 <(pi-ip)> -oN baseline-nmap.txt
 '''
 
 Result: port 22/tcp open (OpenSSH)
@@ -42,7 +42,7 @@ Generated an ed25519 key pair on my PC and copied the public key to the Pi:
 
 '''
 ssh-keygen -t ed25519
-ssh-copy-id <user>@<pi-ip>
+ssh-copy-id <(user)>@<(pi-ip)>
 '''
 
 Confirmed key authentication with 'ssh-v', which reported 'Authenticated ... using "publickey"'.
@@ -65,6 +65,8 @@ Checked the config with 'sudo sshd -t', restarted with 'sudo systemctl restart s
 | --- | --- | --- |
 | PasswordAuthentication | Yes | No |
 | PermitRootLogin | without-password | No |
+
+"without-root" is the legacy alias for "prohibit-password": root could log in over SSH with a key only, never a password. I set it to 'no' to block root SSH logins entirely, so any access has to go through a normal user and sudo.
 
 ![sshd before](screenshots/03-sshd-before.png)
 ![sshd after](screenshots/04-sshd-after.png)
