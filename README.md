@@ -6,7 +6,7 @@ Raspberry Pi 5 security homelab: SSH Hardening, fail2ban, and Docker, building t
 ## Status
 
 - [x] Raspberry Pi OS, networking through nmcli configuration, key-only SSH 
-- [ ] fail2ban and Docker
+- [x] fail2ban and Docker
 - [ ] Cowrie SSH honeypot and test attacks
 - [ ] Wazuh SIEM and agent
 - [ ] write ups
@@ -28,9 +28,9 @@ Installed Raspberry Pi OS Lite and updated it with 'sudo apt update && sudo apt 
 
 Scanned all ports from my PC after enabling SSH:
 
-'''
+```
 nmap -sV -p- -T4 <(pi-ip)> -oN baseline-nmap.txt
-'''
+```
 
 Result: port 22/tcp open (OpenSSH)
 
@@ -40,10 +40,10 @@ Result: port 22/tcp open (OpenSSH)
 
 Generated an ed25519 key pair on my PC and copied the public key to the Pi:
 
-'''
+```
 ssh-keygen -t ed25519
 ssh-copy-id <(user)>@<(pi-ip)>
-'''
+```
 
 Confirmed key authentication with 'ssh-v', which reported 'Authenticated ... using "publickey"'.
 
@@ -53,11 +53,11 @@ Confirmed key authentication with 'ssh-v', which reported 'Authenticated ... usi
 
 Created '/etc/ssh/sshd_config.d/99-hardening.conf':
 
-'''
+```
 PasswordAuthentication no
 PermitRootLogin no
 PublicAuthentication yes
-'''
+```
 
 Checked the config with 'sudo sshd -t', restarted with 'sudo systemctl restart ssh', and verified the effective settings with 'sudo sshd -T'.
 
@@ -77,30 +77,30 @@ Test: a login attempt with a key authentication disabled is now refused
 
 ## 5. fail2ban
 
-Installed fail2ban and enabled the 'sshd' jail in '/etc/fail2ban/jail.local' (5 failed attempts within 10 minutes bans the source for 1 hour. My admin PC is whitelisted)
+Installed fail2ban and enabled the 'sshd' jail in '/etc/fail2ban/jail.local' (5 failed attempts within 10 minutes bans the source for 1 hour. My admin PC is whitelisted.)
 
 This is the configuration file created for fail2ban,
-backend = systemd is needed beacuse current Raspberry Pi OS logs SSH to the systemd journal instead of to /var/log/auth.log
+backend = systemd is needed because current Raspberry Pi OS logs SSH to the systemd journal instead of to /var/log/auth.log
 
-'''
+```
 sudo nano /etc/fail2ban/jail.local
-'''
+```
 
 ![fail2ban jail.local](screenshots/06-fail2ban-jail-local.png)
 
-Ecpected output from the service status.
+Output of the service status.
 
-'''
+```
 sudo systemctl status fail2ban
-'''
+```
 
 ![fail2ban status](screenshots/06-fail2ban-status.png)
 
-Expected output from the fail2ban-client status sshd
+Output of the fail2ban-client status sshd.
 
-'''
+```
 sudo fail2ban-client status sshd
-'''
+```
 
 ![fail2ban-client status](screenshots/06-fail2ban-client-status-sshd.png)
 
