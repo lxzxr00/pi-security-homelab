@@ -9,7 +9,7 @@ Raspberry Pi 5 security homelab: SSH Hardening, fail2ban, and Docker, building t
 - [x] fail2ban and Docker
 - [ ] Cowrie SSH honeypot and test attacks
 - [ ] Wazuh SIEM and agent
-- [ ] write ups
+- [ ] Write-up
 
 ## Lab Setup
 
@@ -22,14 +22,14 @@ Raspberry Pi 5 security homelab: SSH Hardening, fail2ban, and Docker, building t
 
 ### 1. Base system and networking
 
-Installed Raspberry Pi OS Lite and updated it with 'sudo apt update && sudo apt upgrade'. My Starlink router doesn't support DHCP reservations, so I set static IPs on the Pi with the NetworkManager(nmcli).
+Installed Raspberry Pi OS Lite and updated it with `sudo apt update && sudo apt upgrade`. My Starlink router doesn't support DHCP reservations, so I set static IPs on the Pi with the NetworkManager(nmcli).
 
-## 2. Baseline scan (before hardening)
+### 2. Baseline scan (before hardening)
 
 Scanned all ports from my PC after enabling SSH:
 
 ```
-nmap -sV -p- -T4 <(pi-ip)> -oN baseline-nmap.txt
+nmap -sV -p- -T4 <pi-ip> -oN baseline-nmap.txt
 ```
 
 Result: port 22/tcp open (OpenSSH)
@@ -42,48 +42,60 @@ Generated an ed25519 key pair on my PC and copied the public key to the Pi:
 
 ```
 ssh-keygen -t ed25519
-ssh-copy-id <(user)>@<(pi-ip)>
+ssh-copy-id <user>@<pi-ip>
 ```
 
-Confirmed key authentication with 'ssh-v', which reported 'Authenticated ... using "publickey"'.
+Confirmed key authentication with `ssh -v`, which reported 'Authenticated ... using "publickey"'.
 
 ![Publickey auth](screenshots/02-publickey-auth.png)
 
 ### 4. Disabling password login
 
-Created '/etc/ssh/sshd_config.d/99-hardening.conf':
+Created `/etc/ssh/sshd_config.d/99-hardening.conf`:
 
 ```
 PasswordAuthentication no
 PermitRootLogin no
-PublicAuthentication yes
+PubkeyAuthentication yes
 ```
 
-Checked the config with 'sudo sshd -t', restarted with 'sudo systemctl restart ssh', and verified the effective settings with 'sudo sshd -T'.
+Checked the config with `sudo sshd -t`, restarted with `sudo systemctl restart ssh`, and verified the effective settings with `sudo sshd -T`.
 
 | Setting | Before | After |
 | --- | --- | --- |
 | PasswordAuthentication | Yes | No |
 | PermitRootLogin | without-password | No |
 
-"without-root" is the legacy alias for "prohibit-password": root could log in over SSH with a key only, never a password. I set it to 'no' to block root SSH logins entirely, so any access has to go through a normal user and sudo.
+`without-password` is the legacy alias for `prohibit-password`: root could log in over SSH with a key only, never a password. I set it to 'no' to block root SSH logins entirely, so any access has to go through a normal user and sudo.
 
 ![sshd before](screenshots/03-sshd-before.png)
 ![sshd after](screenshots/04-sshd-after.png)
 
-Test: a login attempt with a key authentication disabled is now refused
+Test: a login attempt with key authentication disabled is now refused.
 
 ![Password refused](screenshots/05-password-refused.png)
 
-## 5. fail2ban
+### 5. fail2ban
 
-Installed fail2ban and enabled the 'sshd' jail in '/etc/fail2ban/jail.local' (5 failed attempts within 10 minutes bans the source for 1 hour. My admin PC is whitelisted.)
+Installed fail2ban and enabled the `sshd` jail in `/etc/fail2ban/jail.local` (5 failed attempts within 10 minutes bans the source for 1 hour. My admin PC is whitelisted.)
 
-This is the configuration file created for fail2ban,
+This is the configuration file created for fail2ban.
 backend = systemd is needed because current Raspberry Pi OS logs SSH to the systemd journal instead of to /var/log/auth.log
 
 ```
 sudo nano /etc/fail2ban/jail.local
+```
+
+```
+[DEFAULT]
+bantime  = 1h
+findtime = 10m 
+maxretry = 5
+ignoreip = 127.0.0.1/8 192.168.1.100
+
+[sshd]
+enabled = true
+backend = systemd
 ```
 
 ![fail2ban jail.local](screenshots/06-fail2ban-jail-local.png)
@@ -104,16 +116,23 @@ sudo fail2ban-client status sshd
 
 ![fail2ban-client status](screenshots/06-fail2ban-client-status-sshd.png)
 
-## 6. Docker
+### 6. Docker
 
-Installed Docker with the official script and verified it with 'hello-world'. Displayed version.
+Installed Docker with the official script and verified it with `hello-world`. Displayed version.
+
+```
+docker --verion
+```
+
+```
+docker run hello-world
+```
 
 ![Docker hello-world](screenshots/07-docker-hello-world.png)
 
 
 ## Troubleshooting log
 
--** 100% packet loss between the PC and the Pi.** The Pi's unplugged 'eth0' still had a lower-metric route for the local network, so traffic went out the dead interface instead of Wi-Fi. Bringing the wired connection down fixed it.
-
-
+- **100% packet loss between the PC and the Pi.** The Pi's unplugged 'eth0' still had a lower-metric route for the local network, so traffic went out the dead interface instead of Wi-Fi. Bringing the wired connection down fixed it.
+- **nmap `-p` error:** I typed `-p` instead of `-p-` (all ports), so nmap treated the IP address as a port list and refused to run.
 
